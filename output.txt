@@ -1,0 +1,35 @@
+Channel Capacity = 2
+The current direction is AB
+Packet 1 (HTTP) from AB arrives at the system
+Packet 1 (HTTP) from AB is using the channel
+Packet 2 (FTP) from AB arrives at the system
+Packet 2 (FTP) from AB is using the channel
+Packet 3 (SMTP) from AB arrives at the system
+Packet 1 (HTTP) from AB exits the channel
+Packet 3 (SMTP) from AB is using the channel
+The current direction is NONE
+Packet 2 (FTP) from AB exits the channel
+Packet 3 (SMTP) from AB exits the channel
+The current direction is BA
+Packet 4 (SMTP) from BA arrives at the system
+Packet 4 (SMTP) from BA is using the channel
+Packet 5 (SSH) from BA arrives at the system
+Packet 5 (SSH) from BA is using the channel
+Packet 4 (SMTP) from BA exits the channel
+Packet 6 (HTTP) from BA arrives at the system
+Packet 6 (HTTP) from BA is using the channel
+The current direction is NONE
+Packet 6 (HTTP) from BA exits the channel
+Packet 5 (SSH) from BA exits the channel
+
+Packets transmitted:
+From A to B:
+1 FTP, 1 HTTP, 0 SSH, 1 SMTP
+From B to A:
+0 FTP, 1 HTTP, 1 SSH, 1 SMTP
+
+Packets that waited:
+From A to B:
+0 FTP, 0 HTTP, 0 SSH, 1 SMTP
+From B to A:
+0 FTP, 0 HTTP, 0 SSH, 0 SMTP
