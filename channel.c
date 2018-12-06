@@ -48,7 +48,9 @@ int main()
         fprintf(stderr, "Error creating thread\n");
         return 1;
     }
+    printf("Finished condition\n");
     // Wait for the other threads to finish.
     pthread_join(tid, NULL);
+    printf("Here is after\n");
     return 0;
 }
