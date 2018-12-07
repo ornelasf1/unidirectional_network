@@ -21,9 +21,7 @@ struct Packet{
 int Packet::maxPackets = 0;
 
 static pthread_mutex_t bsem;
-static pthread_mutex_t asem;
 static pthread_cond_t channelAccess = PTHREAD_COND_INITIALIZER;
-static pthread_cond_t openChannel = PTHREAD_COND_INITIALIZER;
 static string direction;
 pthread_t mainT;
 pthread_t channel;
@@ -35,18 +33,16 @@ int i = 0;
 void printSummary();
 
 void* packet_thread(void *packet){
-    //pthread_mutex_lock(&asem);
-    //activeThreads++;
-    //pthread_mutex_unlock(&asem);
-
     Packet* packet_t = (Packet*) packet;
+    activeThreads++;
+
+
     int timeElapsed = 0;
     int direc;
     if(packet_t->direction[1] == 'B') direc = 0;
     else if(packet_t->direction[1] == 'A') direc = 2;
     else direc = -1;
-    
-    //printf("Thread created with packet info: %s %i %s %i\n", packet_t->type.c_str(), packet_t->arrivalTime, packet_t->direction.c_str(), packet_t->travelTime);
+
     printf("Packet #%i (%s) going to %c arrives at the system.\n", packet_t->packetNum, packet_t->type.c_str(), packet_t->direction[1]);
     while(timeElapsed < packet_t->travelTime){
         if(i == direc) printf("Packet #%i (%s) going to %c is using the channel.\n", packet_t->packetNum, packet_t->type.c_str(), packet_t->direction[1]);
@@ -55,13 +51,13 @@ void* packet_thread(void *packet){
             timeElapsed++;
         }
         if(timeElapsed >= packet_t->travelTime) break;
-        printf("Packet thread %i %s is waiting\n", packet_t->packetNum, packet_t->type.c_str());
-        pthread_cond_wait(&channelAccess, &bsem);
+        pthread_mutex_lock(&bsem);
+        if(i != direc)
+            pthread_cond_wait(&channelAccess, &bsem);
+        pthread_mutex_unlock(&bsem);
     }
     printf("Packet #%i (%s) going to %c exits the channel.\n", packet_t->packetNum, packet_t->type.c_str(), packet_t->direction[1]);
-    //pthread_mutex_lock(&asem);
-    //activeThreads--;
-    //pthread_mutex_unlock(&asem);
+    activeThreads--;
 
     return NULL;
 }
@@ -71,9 +67,8 @@ void *channel_thread(void *void_ptr)
     while (1)
     {
         if(allPacketsDone) break;
-        printf("mark 1\n");
+        //printf("mark 1\n");
         pthread_mutex_lock(&bsem);
-        printf("mark 2\n");
         switch (i)
         {
         case 0:
@@ -90,11 +85,8 @@ void *channel_thread(void *void_ptr)
             break;
         }
         pthread_cond_broadcast(&channelAccess);
-        //pthread_cond_broadcast(&openChannel);
         printf("%s\n", direction.c_str());
-        printf("mark 3\n");
         pthread_mutex_unlock(&bsem);
-        printf("mark 4\n");
         sleep(5);
         i = (i + 1) % 4;
     }
@@ -114,29 +106,21 @@ void *main_thread(void *void_ptr){
 
     Packet* packet;
     pthread_t packet_tid[numOfPackets];
-    //int i = 0;
     for(int i = 0; i < numOfPackets; i++){
-        //packet_t->waited = true;
         packet = packets[i];
-        //printf("info of element : %s %i %s %i\n", packet->type.c_str(), packet->arrivalTime, packet->direction.c_str(), packet->travelTime);
-        sleep(packet->arrivalTime);
-        if(activeThreads >= Packet::maxPackets){
-            printf("Pausing main packet creating cause max packet exceeded\n");
-            packet->waited = true;
-            pthread_cond_wait(&openChannel, &asem); 
+        while(activeThreads >= Packet::maxPackets){
+            if(!packet->waited) packet->waited = true;
         }
+        sleep(packet->arrivalTime);
         if(pthread_create(&packet_tid[i], NULL, packet_thread, (void*)packet)){
             printf("Failed to create packet thread\n");
             return NULL;
         }
-        //packets.erase(packets.begin());
-        //i++;
     }
 
     for(int i = 0; i < numOfPackets; i++){
         pthread_join(packet_tid[i], NULL);
     }
-    printf("All packets done\n");
     allPacketsDone = true;
     pthread_join(channel_tid, NULL);
 
@@ -219,12 +203,10 @@ int main(int argc, char* argv[]){
         sline >> line;
         packet->travelTime = atoi(line.c_str());
         packets.push_back(packet);
-        printf("Insert %s %i %s %i\n", packet->type.c_str(), packet->arrivalTime, packet->direction.c_str(), packet->travelTime);
     }
 
     pthread_t main_tid;
     pthread_mutex_init(&bsem, NULL); // Initialize access to 1
-    //pthread_mutex_init(&asem, NULL); // Initialize access to 1
 
     if (pthread_create(&main_tid, NULL, main_thread, (void *)NULL)){
         fprintf(stderr, "Error creating main thread\n");
